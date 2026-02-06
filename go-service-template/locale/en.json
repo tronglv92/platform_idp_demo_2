@@ -1,0 +1,7 @@
+{
+    "200": "Success",
+    "204": "Data is not found",
+    "400": "Bad Request",
+    "401": "No Authorization",
+    "500": "Something went wrong"
+}

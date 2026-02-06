@@ -1,0 +1,89 @@
+server:
+  env: '${SERVER_ENV}'
+  grpc:
+    name: '${SERVICE_NAME}'
+    ListenOn: 0.0.0.0:${SERVICE_GRPC_PORT}
+    timeout: 5000
+    middlewares:
+      stat: false
+      prometheus: false
+      shedding: false
+    telemetry:
+      name: 'inapp-${SERVICE_NAME}'
+      endpoint: '${TELEMETRY_ENDPOINT}'
+      batcher: otlpgrpc
+  http:
+    name: '${SERVICE_NAME}'
+    host: 0.0.0.0
+    port: ${SERVICE_HTTP_PORT}
+    timeout: 30000
+    maxbytes: 10048576
+    middlewares:
+      shedding: false
+    telemetry:
+      name: 'inapp-${SERVICE_NAME}'
+      endpoint: '${TELEMETRY_ENDPOINT}'
+      batcher: otlpgrpc
+  cronjob:
+    name: '${SERVICE_NAME}'
+    client-id: '${INTERNAL_CLIENT_ID}'
+    client-secret: '${INTERNAL_CLIENT_SECRET}'
+    telemetry:
+      endpoint: '${TELEMETRY_ENDPOINT}'
+      batcher: otlpgrpc
+  security:
+    service_code: '${SERVICE_NAME}'
+    jwks_url: '${SECURITY_JWKS_URL}'
+
+database:
+  driver: '${DB_DRIVER}'
+  host: '${DB_HOST}'
+  port: ${DB_PORT}
+  name: '${DB_NAME}'
+  username: '${DB_USERNAME}'
+  password: '${DB_PASSWORD}'
+  schema-name: '${DB_SCHEMA_NAME}'
+  replications:
+    - '${DB_HOST_REPLICATE}'
+  log-level: '${DB_LOGGER_LEVEL}'
+
+cache:
+  stack: redis
+  redis:
+    host: '${REDIS_HOST}'
+    pass: '${REDIS_PASSWORD}'
+    db: ${REDIS_DB}
+
+internal:
+  name: '${SERVICE_NAME}'
+  url: '${INTERNAL_GATEWAY_URL}'
+  client-id: '${INTERNAL_CLIENT_ID}'
+  client-secret: '${INTERNAL_CLIENT_SECRET}'
+
+
+queue:
+  stack: '${QUEUE_STACK}'
+  kafka:
+    name: 'kafka-${SERVICE_NAME}'
+    group: 'inapp-group-${SERVICE_NAME}'
+    telemetry:
+      endpoint: '${TELEMETRY_ENDPOINT}'
+      batcher: otlpgrpc
+    consumers: 3
+    processors: 3
+    brokers:
+      - '${KAFKA_BROKER_HOST}'
+    topics:
+      - authentication-svc-demo
+
+client:
+  scheduler-svc:
+    url: '${INTERNAL_GATEWAY_URL}'
+  user-svc:
+    endpoints:
+      - '${SERVICE_USER_ENDPOINT}'
+    timeout: 5000
+  permission-svc:
+    endpoints:
+      - '${SERVICE_PERMISSION_ENDPOINT}'
+    timeout: 5000

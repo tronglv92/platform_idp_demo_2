@@ -1,0 +1,7 @@
+{
+    "200": "Thành công",
+    "204": "Không có dữ liệu",
+    "400": "Bad Request",
+    "401": "Phiên làm việc của bạn đã hết hạn hoặc tài khoản bị khoá",
+    "500": "Có lỗi xảy ra."
+}

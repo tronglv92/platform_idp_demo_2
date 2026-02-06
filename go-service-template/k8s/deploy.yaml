@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-one
+  labels:
+    app: go-one
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: go-one
+  template:
+    metadata:
+      labels:
+        app: go-one
+    spec:
+      containers:
+        - name: go-one
+          image: luongvantrong/go-one:v2
+          ports:
+            - containerPort: 8000

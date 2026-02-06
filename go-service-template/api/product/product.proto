@@ -1,0 +1,186 @@
+syntax = "proto3";
+
+package go.service.template.product;
+
+import "validate/validate.proto";
+import "pmcpb/protobuf/common.proto";
+import "google/protobuf/empty.proto";
+import "google/api/annotations.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "go-service-template/api/product;productpb";
+
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+  schemes : HTTPS
+  schemes : HTTP
+  consumes : "application/json"
+  produces : "application/json"
+  info : {
+    title : "Product Service",
+    version : "1.0",
+    contact : {
+      name : "Pharmacity Internal Team",
+      url : "https://github.com/Pharmacity-JSC",
+    },
+    license : {
+      name : "BSD 3-Clause License",
+      url : "https://github.com/grpc-ecosystem/grpc-gateway/blob/master/"
+            "LICENSE.txt",
+    },
+  }
+  security_definitions : {
+    security : {
+      key : "Authorization",
+      value : {
+        in : 2
+        type : 2,
+        name : "Authorization",
+        description : "Bearer Token"
+      }
+    }
+  }
+};
+
+// SERVICE
+service Product {
+  rpc ListProducts(ListProductsRequest) returns (ListProductsResponse) {
+    option (google.api.http) = {
+      get : "/boilerplate-svc/api/v1/products"
+    };
+  }
+
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse) {
+    option (google.api.http) = {
+      get : "/boilerplate-svc/api/v1/products/{uid}"
+    };
+  }
+
+  rpc CreateProduct(CreateProductRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post : "/boilerplate-svc/api/v1/products"
+      body : "*"
+    };
+  }
+
+  rpc UpdateProduct(UpdateProductRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      put : "/boilerplate-svc/api/v1/products/{uid}"
+      body : "*"
+    };
+  }
+
+  rpc DeleteProduct(DeleteProductRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete : "/boilerplate-svc/api/v1/products/{uid}"
+    };
+  }
+
+  rpc ExportProducts(ExportProductsRequest) returns (pmcpb.protobuf.FileInfo) {
+    option (google.api.http) = {
+      get : "/boilerplate-svc/api/v1/products/export"
+    };
+  }
+
+  rpc GetProductFromCache(GetProductFromCacheRequest)
+      returns (GetProductFromCacheResponse) {
+    option (google.api.http) = {
+      get : "/boilerplate-svc/api/v1/products/cache/{sku}"
+    };
+  }
+
+  rpc CheckKafka(CheckKafkaRequest) returns (CheckKafkaResponse) {
+    option (google.api.http) = {
+      get : "/boilerplate-svc/api/v1/kafka/check"
+    };
+  }
+}
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_ACTIVE = 1;
+  STATUS_INACTIVE = 2;
+  STATUS_ARCHIVED = 3;
+}
+
+enum EXPORT_TYPE {
+  UNSPECIFIED = 0;
+  URL = 1;
+  DIRECT = 2;
+}
+
+message ListProductsRequest {
+  // @gotags: form:"page,default=1"
+  int32 page = 1 [ json_name = "page", (validate.rules).int32 = {gte : 1} ];
+  // @gotags: form:"limit,default=10"
+  int32 limit = 2
+      [ json_name = "limit", (validate.rules).int32 = {gte : 1, lte : 100} ];
+  // @gotags: form:"sort_order,default=DESC"
+  string sort_order = 3 [ json_name = "sort_order" ];
+  // @gotags: form:"sort_by,default=id"
+  string sort_by = 4 [ json_name = "sort_by" ];
+  optional string name = 5 [ json_name = "name" ];
+  optional string sku = 6 [ json_name = "sku" ];
+}
+
+message ListProductsResponse {
+  repeated GetProductResponse products = 1;
+  pmcpb.protobuf.Pagination pagination = 2;
+}
+
+message GetProductRequest {
+  // @gotags: json:"-" path:"uid"
+  string uid = 1;
+}
+
+message GetProductResponse {
+  int32 id = 1;
+  string uid = 2;
+  string name = 3;
+  string sku = 4;
+  Status status = 5;
+  double price = 6;
+}
+
+message CreateProductRequest {
+  string name = 1;
+  string sku = 2;
+  Status status = 3;
+  double price = 4;
+}
+
+message UpdateProductRequest {
+  // @gotags: json:"-" path:"uid"
+  string uid = 1;
+  string name = 2;
+  string sku = 3;
+  Status status = 4;
+  double price = 5;
+}
+
+message DeleteProductRequest {
+  // @gotags: json:"-" path:"uid"
+  string uid = 1;
+}
+
+message ExportProductsRequest {
+  int32 export_type = 1 [ json_name = "export_type" ];
+  // filter request
+}
+
+message GetProductFromCacheRequest {
+  // @gotags: json:"-" path:"sku"
+  string sku = 1;
+}
+
+message GetProductFromCacheResponse {
+  string sku = 1;
+  string data = 2; // JSON string of product
+  bool from_cache = 3;
+}
+
+message CheckKafkaRequest {}
+
+message CheckKafkaResponse {
+  bool status = 1;
+  string message = 2;
+}
