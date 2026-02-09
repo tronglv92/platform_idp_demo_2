@@ -95,12 +95,24 @@ kubectl create namespace cache         # Redis instances
 # NGINX ingress for kind
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
 
+# Ensure the controller runs on control-plane node (where ports 80/443 are mapped)
+kubectl patch deployment ingress-nginx-controller -n ingress-nginx --type=json -p='[
+  {"op": "add", "path": "/spec/template/spec/nodeSelector", "value": {"ingress-ready": "true"}},
+  {"op": "add", "path": "/spec/template/spec/tolerations", "value": [{"key": "node-role.kubernetes.io/control-plane", "operator": "Exists", "effect": "NoSchedule"}]}
+]'
+
 # Wait for it to be ready
+kubectl rollout status deployment ingress-nginx-controller -n ingress-nginx --timeout=120s
 kubectl wait --namespace ingress-nginx \
   --for=condition=ready pod \
   --selector=app.kubernetes.io/component=controller \
   --timeout=90s
+
+# Verify controller is on control-plane node
+kubectl get pods -n ingress-nginx -o wide
 ```
+
+> **Important**: The ingress controller pod **must** run on the `control-plane` node. Kind only maps host ports 80/443 to the control-plane node. If the pod schedules on a worker node, ingress traffic will not reach it.
 
 ---
 
@@ -217,7 +229,26 @@ kubectl wait --namespace platform \
   --timeout=180s
 ```
 
-### 4.2 Add DNS Entry
+### 4.2 Create Self-Signed TLS Certificate
+
+Generate a self-signed certificate with SANs and create a Kubernetes secret for the ingress:
+
+```bash
+# Generate self-signed cert (must include SANs, not just CN)
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout /tmp/argocd-tls.key -out /tmp/argocd-tls.crt \
+  -subj "/CN=argocd.test.com" \
+  -addext "subjectAltName=DNS:argocd.test.com"
+
+# Create TLS secret in platform namespace
+kubectl create secret tls argocd-server-tls \
+  --cert=/tmp/argocd-tls.crt --key=/tmp/argocd-tls.key \
+  -n platform
+```
+
+> **Note**: The `-addext "subjectAltName=..."` is required. NGINX ingress rejects certificates that only use the legacy Common Name field without SANs.
+
+### 4.3 Add DNS Entry
 
 Add the following to `/etc/hosts` (for local development with kind):
 
@@ -225,7 +256,7 @@ Add the following to `/etc/hosts` (for local development with kind):
 echo "127.0.0.1 argocd.test.com" | sudo tee -a /etc/hosts
 ```
 
-### 4.3 Access ArgoCD UI
+### 4.4 Access ArgoCD UI
 
 ```bash
 # Get initial admin password
@@ -233,9 +264,11 @@ kubectl -n platform get secret argocd-initial-admin-secret \
   -o jsonpath="{.data.password}" | base64 -d; echo
 ```
 
-Open: `http://argocd.test.com` — Login: `admin` / (password from above)
+Open: `https://argocd.test.com` — Login: `admin` / (password from above)
 
-### 4.4 Configure Git Repository
+> **Note**: The browser will show a certificate warning because of the self-signed cert. Click "Advanced" → "Accept the Risk and Continue" (Firefox) or "Proceed to argocd.test.com" (Chrome).
+
+### 4.5 Configure Git Repository
 
 ```bash
 # Login via CLI
@@ -247,7 +280,7 @@ argocd repo add https://github.com/<your-org>/platform-idp.git \
   --password <github-token>
 ```
 
-### 4.5 Create App-of-Apps
+### 4.6 Create App-of-Apps
 
 ```yaml
 # argocd/platform/app-of-apps.yaml
@@ -259,7 +292,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/<your-org>/platform-idp.git
+    repoURL: https://github.com/tronglv92/platform_idp_demo_2
     targetRevision: main
     path: argocd/platform
   destination:

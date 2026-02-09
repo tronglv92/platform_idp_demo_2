@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-apps
+  namespace: platform
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/tronglv92/platform_idp_demo_2
+    targetRevision: master
+    path: argocd/platform
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: platform
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
