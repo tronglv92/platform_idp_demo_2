@@ -1,4 +1,4 @@
-package cron
+	package cron
 
 import (
 	"go-service-template/internal/registry"

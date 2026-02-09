@@ -3,6 +3,7 @@ package registry
 import (
 	"go-service-template/helper/cache"
 	"go-service-template/helper/db"
+	"go-service-template/helper/queue"
 	"go-service-template/helper/toolkit/downloader"
 	"go-service-template/internal/config"
 )
@@ -35,4 +36,7 @@ func (c *consumerContext) GetDownloader() downloader.Downloader {
 }
 func (s *consumerContext) GetCacheClient() cache.Cache {
 	return s.cacheClient
+}
+func (s *consumerContext) GetProducerClient() queue.Producer {
+	return nil
 }

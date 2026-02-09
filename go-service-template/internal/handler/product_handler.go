@@ -7,6 +7,12 @@ import (
 	pmcpb "go-service-template/helper/pmcpb/protobuf"
 	"go-service-template/internal/registry"
 	"go-service-template/internal/service"
+	"os"
+	"time"
+
+	"go-service-template/helper/queue"
+	consumerq "go-service-template/helper/queue/consumer"
+	kconf "go-service-template/helper/queue/kafka"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -68,4 +74,41 @@ func (h *ProductHandler) GetProductFromCache(ctx context.Context, req *productpb
 		return nil, errors.BadRequest(err)
 	}
 	return h.productSvc.GetProductFromCache(ctx, req)
+}
+
+func (h *ProductHandler) CheckKafka(ctx context.Context, req *productpb.CheckKafkaRequest) (*productpb.CheckKafkaResponse, error) {
+	broker := os.Getenv("KAFKA_BROKER")
+	if broker == "" {
+		broker = "localhost:9092"
+	}
+
+	// Build queue producer using internal helper
+	cfg := queue.Config{
+		Stack: queue.KafkaDriver,
+		Kafka: kconf.Config{
+			Brokers: []string{broker},
+			Topic:   "health-check",
+		},
+	}
+
+	prod, err := queue.New(cfg)
+	if err != nil {
+		return &productpb.CheckKafkaResponse{Status: false, Message: err.Error()}, nil
+	}
+	defer prod.Close()
+
+	// send a small health payload with short timeout
+	dialCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	payload := &consumerq.Payload{
+		QueueName: "health-check",
+		Message:   "ping",
+	}
+
+	if err := prod.SendCtx(dialCtx, payload); err != nil {
+		return &productpb.CheckKafkaResponse{Status: false, Message: err.Error()}, nil
+	}
+
+	return &productpb.CheckKafkaResponse{Status: true, Message: "connected"}, nil
 }
