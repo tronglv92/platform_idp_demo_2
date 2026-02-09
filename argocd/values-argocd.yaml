@@ -1,0 +1,15 @@
+server:
+  service:
+    type: ClusterIP
+
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hostname: argocd.test.com
+    tls: false
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: HTTP
+
+configs:
+  params:
+    server.insecure: true
